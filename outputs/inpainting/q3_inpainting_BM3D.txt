@@ -1,0 +1,27 @@
+Image               PSNR_y     PSNR_xhat
+----------------------------------------
+cameraman             6.55         24.23
+house                 5.85         32.40
+peppers               6.55         26.30
+lena                  6.65         31.28
+barbara               6.85         25.91
+boat                  6.31         27.75
+hill                  7.33         29.17
+couple                6.90         28.13
+----------------------------------------
+Average               6.62         28.15
+
+Denoiser: BM3D  |  best config: n_iter=20, rho=0.02, sigma_d=0.04  |  tuned on 5 images
+
+Tuning ranking (avg PSNR over ['cameraman', 'house', 'peppers', 'lena', 'barbara']):
+
+     avg   config
+------------------------------------------------------------
+   28.03   n_iter=20, rho=0.02, sigma_d=0.04
+   28.00   n_iter=20, rho=0.05, sigma_d=0.04
+   27.23   n_iter=10, rho=0.02, sigma_d=0.04
+   27.21   n_iter=10, rho=0.05, sigma_d=0.04
+   26.52   n_iter=20, rho=0.02, sigma_d=0.02
+   26.52   n_iter=20, rho=0.05, sigma_d=0.02
+   25.73   n_iter=10, rho=0.05, sigma_d=0.02
+   25.73   n_iter=10, rho=0.02, sigma_d=0.02

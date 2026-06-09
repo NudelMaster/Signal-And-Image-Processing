@@ -4,7 +4,7 @@ admm_pnp.py  –  ADMM Plug-and-Play framework
 
 Supports two forward operators:
   • 'deblur'   : A x = x * k  (cyclic convolution)
-
+  • 'inpainting'  : A x = y  (subsampling)
 
 ADMM-PnP update equations
 ==========================
@@ -35,6 +35,12 @@ With cyclic convolution  A = F⁻¹ diag(K̂) F:
   data fidelity equation (AtA + ρI) z = Aty + ρ(x+u)
   z = F⁻¹[ (K̂* Ŷ + ρ(X + Û)) / (|K̂|² + ρ) ]
 
+Inpainting z-update (mask-multiplication)
+-----------------------------------------
+With subsampling diagonal matrix A_ii = 1 if i in M, 0 otherwise:
+  data fidelity equation (AᵀA + ρI) z = Aᵀy + ρ(x+u)
+  AᵀA = diag(M), A^T = A
+  z = (Ay + ρ(x+u)) / (A + ρ)
 """
 
 import numpy as np
@@ -52,11 +58,52 @@ def z_update_deblur(x, u, rho, aty_freq, blur_kernel_fd_abs2):
     rhs_freq = aty_freq + rho * np.fft.fft2(x + u)        # K̂* Ŷ + ρ F(x+u)
     z = np.real(np.fft.ifft2(rhs_freq / (blur_kernel_fd_abs2 + rho)))
     return z
+  
+
+# ── z-update: inpainting ──────────────────────────────────────────────────────
+def z_update_inpainting(y, u, rho, x, M):
+    """Closed-form z-update for inpainting via mask-multiplication.
+
+    :param y: observed image
+    :param u: dual variable
+    :param rho: ADMM penalty parameter
+    :param x: current image estimate
+    :param M: mask matrix
+    """
+    numerator = M * y + rho * (x + u)
+    z = numerator / (M + rho)
+    return z
 
 
+def admm_pnp_inpainting(y, M, denoiser, sigma_d, rho,
+                        n_iter=30, x_init=None, verbose=False,
+                        rho_schedule=None):
+    """
+    ADMM-PnP for inpainting.
+    """
 
+    x = y.copy() if x_init is None else x_init.copy()
+    z = x.copy()
+    u = np.zeros_like(x)
 
+    rho_sched   = dict(rho_schedule or [])
 
+    for it in range(n_iter):
+        if it in rho_sched:
+            new_rho = rho_sched[it]
+            # scaled dual u = (unscaled multiplier)/rho, so when rho changes the
+            # scaled dual must be rescaled to keep the multiplier consistent.
+            u = u * (rho / new_rho)
+            rho = new_rho
+
+        z = z_update_inpainting(y, u, rho, x, M)
+        x = denoiser(np.clip(z - u, 0, 1), sigma_d)
+        u = u + x - z
+
+        if verbose:
+            print(f"  iter {it+1:3d}/{n_iter}")
+
+    return np.clip(x, 0, 1)
 
 
 
